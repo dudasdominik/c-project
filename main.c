@@ -4,9 +4,15 @@
 #include <uchar.h>
 #include <wchar.h>
 
+
+#define MAX_LINES 100
+#define MAX_LINE_LENGTH 800
+char lines[MAX_LINES][MAX_LINE_LENGTH];
 char username[800];
 char password[800];
-
+int key[] = {5, -14, 31, -9, 3};
+int key_length = 5;
+char decoded_data[1600];
 
 void getinputs () {
     printf("\nPlease enter the username: \n");
@@ -15,48 +21,52 @@ void getinputs () {
 
     printf("\nPlease enter the password: \n");
     fgets(password, sizeof(password), stdin);
-    password[strcspn(username, "\n")] = '\0';
-
-
-    printf(username);
-    printf(password);
-    printf("-----------------\n");
+    password[strcspn(password, "\n")] = '\0';
 }
 
-
-int key[] = {5, -14, 31, -9, 3};
-int key_length = 5;
-char decoded_data[1600];
-
-int decode_file(char *filename) {
+void decode_file(char *filename) {
     FILE *file = fopen(filename, "rb");
     if (file == NULL) {
         printf("Error: File not found\n");
-        return 1;
     }
         int byte;
         int i = 0;
         int j = 0;
+        int prev_byte = -1;
     while ((byte = fgetc(file)) != EOF) {
         if (byte != 0x0A) {
             byte -= key[i];
             i = (i + 1) % key_length;
-            wchar_t asd;
-asd = (char) byte;
+            printf("----------------------\n");
             printf("BYTE: %d\n", byte);
             printf("CHAR: %c\n", (char) byte);
+            printf("\n-------------------");
+            if((byte == 195 && prev_byte == 179) || (byte == 179 && prev_byte == 195)) {
+                decoded_data[j++] = 162;
+                prev_byte = -1;
+            }else if(byte == 161) {
+                decoded_data[j++] = 160;
+            }else if(byte == 182) {
+                decoded_data[j++] = 148;
+            }else if(byte == 195 || byte == 179) {
+                prev_byte = byte;
+                continue;
+            }
+            else if (prev_byte != -1) {
+                decoded_data[j++] = (char) byte;
+                prev_byte = byte;
+            }else {
+                prev_byte = byte;
+                decoded_data[j++] = (char) byte;
+            }
         } else {
             i = 0;
+            //decoded_data[j++] = '\n';
         }
-        decoded_data[j++] = byte;
-
     }
+    decoded_data[j] = '\0';
     fclose(file);
-    return 1;
 }
-#define MAX_LINES 100
-#define MAX_LINE_LENGTH 800
-char lines[MAX_LINES][MAX_LINE_LENGTH];
 
 void split_username_password() {
     int line_count = 0;
@@ -68,20 +78,19 @@ void split_username_password() {
         line = strtok(NULL, "\n");
         line_count++;
     }
-
     for (int i = 0; i <= line_count; i++) {
         char *test = strpbrk(lines[i], "*@");
         if (test != NULL) {
             *test = '\0';
             char *user = lines[i];
             char *pass = test + 1;
-            if ((strcoll(password, pass) == 0) && (strcoll(username, user) == 0)) {
+            if ((strcmp(password, pass) == 0) && (strcmp(username, user) == 0)) {
                 printf("Login successful\n");
-                break;
+                return;
             }
         }
     }
-
+    printf("Login failed\n");
 }
 
 
@@ -90,15 +99,19 @@ void username_to_bytes(const char *username, unsigned char *byte_array) {
     for (size_t i = 0; i < length; i++) {
         byte_array[i] = (unsigned char)username[i];
     }
-    byte_array[length] = '\0';  // Null-terminate the byte array
+    byte_array[length] = '\0';
 }
 
 
 
 int main() {
     setlocale(LC_ALL, "hu_HU.UTF-8");
-    decode_file("D:/Work/untitled/jelszo.bin");
     //getinputs();
+    decode_file("D:/Work/untitled/telefonkonyv.bin");
+    //split_username_password();
+    printf(decoded_data);
+
+    /*
     unsigned char byte_array[800];
     username_to_bytes(username, byte_array);
     printf("----------------------\n");
@@ -107,7 +120,9 @@ int main() {
         printf("CHAR: %c\n", (char) byte_array[i]);
     }
     printf("\n");
+    */
 
-    //split_username_password();
+
+
     return 0;
 }
