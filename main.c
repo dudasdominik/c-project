@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <conio.h>
 
 
 #define MAX_LINES 100
@@ -25,7 +26,6 @@ typedef struct {
 char phonebook_data[MAX_ENTRIES];
 
 PhonebookEntry phonebook[800];
-
 
 void getinputs () {
     printf("\nPlease enter the username: \n");
@@ -103,12 +103,23 @@ void split_phonebook() {
         line = strtok(NULL, "\n");
     }
 }
+void draw_rectangle_with_content(int width, int height, int page) {
+    int start_index = page * PAGE_SIZE;
+    int end_index = start_index + PAGE_SIZE;
+    if (end_index > MAX_ENTRIES) {
+        end_index = MAX_ENTRIES;
+    }
 
-void draw_rectangle(int width, int height) {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             if (i == 0 || i == height - 1 || j == 0 || j == width - 1) {
                 printf("#");
+            } else if (i > 1 && i < height - 1 && j == 2 && (i - 2) < PAGE_SIZE && (start_index + (i - 2)) < end_index) {
+                int entry_index = start_index + (i - 2);
+                if (phonebook[entry_index].name[0] != '\0') {
+                    printf("%s - %s", phonebook[entry_index].name, phonebook[entry_index].phone);
+                    j += strlen(phonebook[entry_index].name) + strlen(phonebook[entry_index].phone) + 2;
+                }
             } else {
                 printf(" ");
             }
@@ -118,36 +129,75 @@ void draw_rectangle(int width, int height) {
 }
 
 void display_phonebook_page(int page) {
-    int start_index = page * PAGE_SIZE;
-    int end_index = start_index + PAGE_SIZE;
-    if (end_index > MAX_ENTRIES) {
-        end_index = MAX_ENTRIES;
-    }
+    draw_rectangle_with_content(45, 13, page);
+    printf("\nJelenlegi oldal: %d\n", page + 1);
+    printf("\nNavigacio: [n] Kovetkezo, [p] Elozo, [s] Kereses,[q] Kilepes\n");
+}
 
-    draw_rectangle(60, 15);
-    printf("\nTelefonkönyv - %d. oldal\n", page + 1);
-    for (int i = start_index; i < end_index && phonebook[i].name[0] != '\0'; i++) {
-        printf("%d. %s - %s\n", i + 1, phonebook[i].name, phonebook[i].phone);
+void search_phonebook(int current_page) {
+    char input[50];
+    printf("Add meg a keresett nevet vagy telefonszamot: ");
+    scanf("%49s", input);
+    getchar();
+
+    bool found = false;
+    for (int i = 0; i < MAX_ENTRIES && phonebook[i].name[0] != '\0'; i++) {
+        if ((strcmp(phonebook[i].name, input) == 0) || (strcmp(phonebook[i].phone, input) == 0)) {
+            printf("Talalat: %s - %s\n", phonebook[i].name, phonebook[i].phone);
+            printf("\n Navigalj vissza a telefonkonyvhez: [b] Back\n");
+            found = true;
+            }
     }
-    printf("\nNavigálj a következő oldalakhoz: [n] Következő, [p] Előző, [q] Kilépés\n");
+    if (!found) {
+        printf("Nincs talalat.\n");
+    }
+}
+
+void navigate_phonebook() {
+    int current_page = 0;
+    char choice;
+    display_phonebook_page(current_page);
+    while (true) {
+        choice = getchar();
+        getchar();
+
+        if (choice == 'n' && current_page <= 5) {
+            system("cls");
+            display_phonebook_page(current_page);
+            current_page++;
+        } else if (choice == 'p' && current_page >= 0) {
+            system("cls");
+            display_phonebook_page(current_page);
+            current_page--;
+        } else if (choice == 'q') {
+            system("exit");
+            break;
+        } else if (choice == 's') {
+            system("cls");
+            search_phonebook(current_page);
+        } else if (choice == 'b') {
+            system("cls");
+            display_phonebook_page(current_page);
+        }
+        else {
+            printf("Nem valid, probald meg ujra\n");
+        }
+    }
 }
 
 
 int main() {
     setlocale(LC_ALL, "hu_HU.UTF-8");
+
     getinputs();
     decode_file("D:/Work/untitled/jelszo_javitott.bin");
     if(split_username_password()) {
         decode_file("D:/Work/untitled/telefonkonyv.bin");
         split_phonebook();
-        display_phonebook_page(2);
-        sleep(120);
+        navigate_phonebook();
     }
 
 
-    /*
-    for (int i = 0; i < 800 && phonebook[i].name[0] != '\0'; i++) {
-        printf("%s - %s\n", phonebook[i].name, phonebook[i].phone);
-    } */
+
     return 0;
 }
