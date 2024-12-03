@@ -128,10 +128,62 @@ void draw_rectangle_with_content(int width, int height, int page) {
     }
 }
 
+void display_phonebook_page_with_selection(int page, int selected_index) {
+    int start_index = page * PAGE_SIZE;
+    int end_index = start_index + PAGE_SIZE;
+    if (end_index > MAX_ENTRIES) {
+        end_index = MAX_ENTRIES;
+    }
+
+    //system("cls");
+    printf("Telefonkönyv - %d. oldal\n", page + 1);
+    for (int i = start_index; i < end_index && phonebook[i].name[0] != '\0'; i++) {
+        if (i == selected_index) {
+            printf("> %s - %s <\n", phonebook[i].name, phonebook[i].phone);
+        } else {
+            printf("  %s - %s\n", phonebook[i].name, phonebook[i].phone);
+        }
+    }
+    printf("\nNavigálj a talalatok kozott: w (Fel), s (Le), q (Kilepes), m (Menu Valtas)\n");
+}
+
+void navigate_phonebook_with_selection() {
+    int current_page = 0;
+    int selected_index = 0;
+    system("cls");
+    display_phonebook_page_with_selection(current_page, selected_index);
+    while (true) {
+        system("cls");
+        display_phonebook_page_with_selection(current_page, selected_index);
+            // Speciális karakterek esetén (nyílbillentyűk)
+            switch (getch()) {
+                case 'w': // Fel nyíl (ASCII 72)
+                    if (selected_index > current_page * PAGE_SIZE) {
+                        selected_index--;
+                    } else if (current_page > 0) {
+                        current_page--;
+                        selected_index = (current_page + 1) * PAGE_SIZE - 1;
+                    }
+                break;
+                case 's': // Le nyíl (ASCII 80)
+                    if (selected_index < (current_page + 1) * PAGE_SIZE - 1 && phonebook[selected_index + 1].name[0] != '\0') {
+                        selected_index++;
+                    } else if ((current_page + 1) * PAGE_SIZE < MAX_ENTRIES && phonebook[(current_page + 1) * PAGE_SIZE].name[0] != '\0') {
+                        current_page++;
+                        selected_index = current_page * PAGE_SIZE;
+                    }
+                break;
+                case 'q':
+                    system("exit");
+                    break;
+            }
+    }
+}
+
 void display_phonebook_page(int page) {
     draw_rectangle_with_content(45, 13, page);
     printf("\nJelenlegi oldal: %d\n", page + 1);
-    printf("\nNavigacio: [n] Kovetkezo, [p] Elozo, [s] Kereses,[q] Kilepes\n");
+    printf("\nNavigacio: [n] Kovetkezo, [p] Elozo, [s] Kereses, [q] Kilepes\n");
 }
 
 void search_phonebook(int current_page) {
@@ -156,6 +208,7 @@ void search_phonebook(int current_page) {
 void navigate_phonebook() {
     int current_page = 0;
     char choice;
+    system("cls");
     display_phonebook_page(current_page);
     while (true) {
         choice = getchar();
@@ -178,11 +231,17 @@ void navigate_phonebook() {
         } else if (choice == 'b') {
             system("cls");
             display_phonebook_page(current_page);
+        } else if (choice == 'm') {
+            navigate_phonebook_with_selection();
         }
         else {
             printf("Nem valid, probald meg ujra\n");
         }
     }
+}
+
+void navigation_menu() {
+
 }
 
 
