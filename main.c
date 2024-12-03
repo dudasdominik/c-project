@@ -144,49 +144,18 @@ void display_phonebook_page_with_selection(int page, int selected_index) {
             printf("  %s - %s\n", phonebook[i].name, phonebook[i].phone);
         }
     }
-    printf("\nNavigálj a talalatok kozott: w (Fel), s (Le), q (Kilepes), m (Menu Valtas)\n");
+    printf("\nNavigálj a talalatok kozott: w (Fel), s (Le), v (Menu Valtas)\n");
 }
 
-void navigate_phonebook_with_selection() {
-    int current_page = 0;
-    int selected_index = 0;
-    system("cls");
-    display_phonebook_page_with_selection(current_page, selected_index);
-    while (true) {
-        system("cls");
-        display_phonebook_page_with_selection(current_page, selected_index);
-            // Speciális karakterek esetén (nyílbillentyűk)
-            switch (getch()) {
-                case 'w': // Fel nyíl (ASCII 72)
-                    if (selected_index > current_page * PAGE_SIZE) {
-                        selected_index--;
-                    } else if (current_page > 0) {
-                        current_page--;
-                        selected_index = (current_page + 1) * PAGE_SIZE - 1;
-                    }
-                break;
-                case 's': // Le nyíl (ASCII 80)
-                    if (selected_index < (current_page + 1) * PAGE_SIZE - 1 && phonebook[selected_index + 1].name[0] != '\0') {
-                        selected_index++;
-                    } else if ((current_page + 1) * PAGE_SIZE < MAX_ENTRIES && phonebook[(current_page + 1) * PAGE_SIZE].name[0] != '\0') {
-                        current_page++;
-                        selected_index = current_page * PAGE_SIZE;
-                    }
-                break;
-                case 'q':
-                    system("exit");
-                    break;
-            }
-    }
-}
+
 
 void display_phonebook_page(int page) {
     draw_rectangle_with_content(45, 13, page);
     printf("\nJelenlegi oldal: %d\n", page + 1);
-    printf("\nNavigacio: [n] Kovetkezo, [p] Elozo, [s] Kereses, [q] Kilepes\n");
+    printf("\nNavigacio: [n] Kovetkezo, [p] Elozo, [s] Kereses, [m] Menu Valtas , [q] Kilepes\n");
 }
 
-void search_phonebook(int current_page) {
+void search_phonebook() {
     char input[50];
     printf("Add meg a keresett nevet vagy telefonszamot: ");
     scanf("%49s", input);
@@ -205,43 +174,80 @@ void search_phonebook(int current_page) {
     }
 }
 
-void navigate_phonebook() {
+
+
+void navigation_menu() {
     int current_page = 0;
+    int selected_index = 0;
     char choice;
+    bool is_Selection = false;
     system("cls");
     display_phonebook_page(current_page);
     while (true) {
-        choice = getchar();
-        getchar();
+        if(!is_Selection) {
+            choice = getchar();
+            getchar();
 
-        if (choice == 'n' && current_page <= 5) {
-            system("cls");
-            display_phonebook_page(current_page);
-            current_page++;
-        } else if (choice == 'p' && current_page >= 0) {
-            system("cls");
-            display_phonebook_page(current_page);
-            current_page--;
-        } else if (choice == 'q') {
-            system("exit");
-            break;
-        } else if (choice == 's') {
-            system("cls");
-            search_phonebook(current_page);
-        } else if (choice == 'b') {
-            system("cls");
-            display_phonebook_page(current_page);
-        } else if (choice == 'm') {
-            navigate_phonebook_with_selection();
+            if (choice == 'n' && current_page <= 5) {
+                system("cls");
+                display_phonebook_page(current_page);
+                current_page++;
+            } else if (choice == 'p' && current_page >= 0) {
+                system("cls");
+                display_phonebook_page(current_page);
+                current_page--;
+            } else if (choice == 'q') {
+                system("exit");
+                break;
+            } else if (choice == 's') {
+                system("cls");
+                search_phonebook(current_page);
+            } else if (choice == 'b') {
+                system("cls");
+                display_phonebook_page(current_page);
+            } else if (choice == 'm') {
+                system("cls");
+                display_phonebook_page_with_selection(current_page, selected_index);
+                is_Selection = true;
+            }
+            else {
+                printf("Nem valid, probald meg ujra\n");
+            }
+        }else {
+            switch (getch()) {
+                case 'w':
+                    if (selected_index > current_page * PAGE_SIZE) {
+                        system("cls");
+                        display_phonebook_page_with_selection(current_page, selected_index);
+                        selected_index--;
+                    } else if (current_page > 0) {
+                        system("cls");
+                        display_phonebook_page_with_selection(current_page, selected_index);
+                        current_page--;
+                        selected_index = (current_page + 1) * PAGE_SIZE - 1;
+                    }
+                break;
+                case 's':
+                    if (selected_index < (current_page + 1) * PAGE_SIZE - 1 && phonebook[selected_index + 1].name[0] != '\0') {
+                        system("cls");
+                        display_phonebook_page_with_selection(current_page, selected_index);
+                        selected_index++;
+                    } else if ((current_page + 1) * PAGE_SIZE < MAX_ENTRIES && phonebook[(current_page + 1) * PAGE_SIZE].name[0] != '\0') {
+                        system("cls");
+                        display_phonebook_page_with_selection(current_page, selected_index);
+                        current_page++;
+                        selected_index = current_page * PAGE_SIZE;
+                    }
+                break;
+                case 'v':
+                    system("cls");
+                    display_phonebook_page(current_page);
+                    is_Selection = false;
+                break;
+            }
         }
-        else {
-            printf("Nem valid, probald meg ujra\n");
-        }
+
     }
-}
-
-void navigation_menu() {
-
 }
 
 
@@ -253,7 +259,7 @@ int main() {
     if(split_username_password()) {
         decode_file("D:/Work/untitled/telefonkonyv.bin");
         split_phonebook();
-        navigate_phonebook();
+        navigation_menu();
     }
 
 
