@@ -16,16 +16,27 @@ char username[800];
 char password[800];
 int key[] = {5, -14, 31, -9, 3};
 int key_length = 5;
-char users[1600];
 
 typedef struct {
     char name[50];
-    char phone[50];
-} PhonebookEntry;
+    char data[50];
+} Data;
+
+char users_data[1600];
+typedef struct {
+    char name[50];
+    char data[50];
+} User;
+User users[800];
+
 
 char phonebook_data[MAX_ENTRIES];
-
+typedef struct {
+    char name[50];
+    char data[50];
+} PhonebookEntry;
 PhonebookEntry phonebook[800];
+
 
 void getinputs () {
     printf("\nPlease enter the username: \n");
@@ -37,13 +48,12 @@ void getinputs () {
     password[strcspn(password, "\n")] = '\0';
 }
 
-void decode_file(char *filename) {
+void decode_file(char *filename, char *decoded) {
     FILE *file = fopen(filename, "rb");
     if (file == NULL) {
         printf("Error: File not found\n");
         return;
     }
-        int isuser = (strcmp(filename, "D:/Work/untitled/telefonkonyv.bin") == 0) ? 0 : 1;
         int byte;
         int i = 0;
         int j = 0;
@@ -51,58 +61,47 @@ void decode_file(char *filename) {
         if (byte != 0x0A) {
             byte -= key[i];
             i = (i + 1) % key_length;
-            isuser == 1 ? (users[j++] = (char)byte) : (phonebook_data[j++] = (char)byte);
+            decoded[j++] = byte;
         } else {
             i = 0;
-            isuser == 1 ? (users[j++] = '\n') : (phonebook_data[j++] = '\n');
+            decoded[j++] = '\n';
         }
     }
-    isuser == 1 ? (users[j++] = '\0') : (phonebook_data[j++] = '\0');
+    decoded[j] = '\0';
     fclose(file);
 }
 
-bool split_username_password() {
-    int line_count = 0;
-    char *line = strtok(users, "\n");
 
-    while (line != NULL && line_count < MAX_LINES) {
-        strncpy(lines[line_count], line, MAX_LINE_LENGTH - 1);
-        lines[line_count][MAX_LINE_LENGTH - 1] = '\0';
-        line = strtok(NULL, "\n");
-        line_count++;
-    }
-    for (int i = 0; i <= line_count; i++) {
-        char *test = strpbrk(lines[i], "*@");
-        if (test != NULL) {
-            *test = '\0';
-            char *user = lines[i];
-            char *pass = test + 1;
-            if ((strcmp(password, pass) == 0) && (strcmp(username, user) == 0)) {
-                printf("Login successful\n");
-                return true;
-            }
-        }
-    }
-    printf("Login failed\n");
-    return false;
-}
-
-void split_phonebook() {
-    char *line = strtok(phonebook_data, "\n");
+void split_data(char *data, void *entries, size_t entry_size, int max_entries) {
+    char *line = strtok(data, "\n");
     int entry_count = 0;
     while (line != NULL) {
-        char *separator = strchr(line, ';');
-        if ((separator != NULL) && (entry_count < MAX_ENTRIES)) {
+        char *separator = strpbrk(line, ";*");
+        if ((separator != NULL) && (entry_count < max_entries)) {
             *separator = '\0';
-            strncpy(phonebook[entry_count].name, line, sizeof(phonebook[entry_count].name) - 1);
-            strncpy(phonebook[entry_count].phone, separator + 1, sizeof(phonebook[entry_count].phone) - 1);
-            phonebook[entry_count].name[sizeof(phonebook[entry_count].name) - 1] = '\0';
-            phonebook[entry_count].phone[sizeof(phonebook[entry_count].phone) - 1] = '\0';
+            char *entry_ptr = (char*)entries + (entry_count * entry_size);
+
+            strncpy(((Data *)entry_ptr)->name, line, sizeof(((Data *)entry_ptr)->name) - 1);
+            strncpy(((Data *)entry_ptr)->data, separator + 1, sizeof(((Data *)entry_ptr)->data) - 1);
+            ((Data *)entry_ptr)->name[sizeof(((Data *)entry_ptr)->name) - 1] = '\0';
+            ((Data *)entry_ptr)->data[sizeof(((Data *)entry_ptr)->data) - 1] = '\0';
+
             entry_count++;
         }
         line = strtok(NULL, "\n");
     }
 }
+
+bool isLoggedIn() {
+    split_data(users_data, users, sizeof(User), 800);
+    for (int i = 0; i < sizeof(users); i++) {
+        if (strcmp(users[i].name, username) == 0 && strcmp(users[i].data, password) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void draw_rectangle_with_content(int width, int height, int page) {
     int start_index = page * PAGE_SIZE;
     int end_index = start_index + PAGE_SIZE;
@@ -117,8 +116,8 @@ void draw_rectangle_with_content(int width, int height, int page) {
             } else if (i > 1 && i < height - 1 && j == 2 && (i - 2) < PAGE_SIZE && (start_index + (i - 2)) < end_index) {
                 int entry_index = start_index + (i - 2);
                 if (phonebook[entry_index].name[0] != '\0') {
-                    printf("%s - %s", phonebook[entry_index].name, phonebook[entry_index].phone);
-                    j += strlen(phonebook[entry_index].name) + strlen(phonebook[entry_index].phone) + 2;
+                    printf("%s - %s", phonebook[entry_index].name, phonebook[entry_index].data);
+                    j += strlen(phonebook[entry_index].name) + strlen(phonebook[entry_index].data) + 2;
                 }
             } else {
                 printf(" ");
@@ -135,13 +134,12 @@ void display_phonebook_page_with_selection(int page, int selected_index) {
         end_index = MAX_ENTRIES;
     }
 
-    //system("cls");
     printf("Telefonkönyv - %d. oldal\n", page + 1);
     for (int i = start_index; i < end_index && phonebook[i].name[0] != '\0'; i++) {
         if (i == selected_index) {
-            printf("> %s - %s <\n", phonebook[i].name, phonebook[i].phone);
+            printf("> %s - %s <\n", phonebook[i].name, phonebook[i].data);
         } else {
-            printf("  %s - %s\n", phonebook[i].name, phonebook[i].phone);
+            printf("  %s - %s\n", phonebook[i].name, phonebook[i].data);
         }
     }
     printf("\nNavigálj a talalatok kozott: w (Fel), s (Le), v (Menu Valtas)\n");
@@ -163,8 +161,8 @@ void search_phonebook() {
 
     bool found = false;
     for (int i = 0; i < MAX_ENTRIES && phonebook[i].name[0] != '\0'; i++) {
-        if ((strcmp(phonebook[i].name, input) == 0) || (strcmp(phonebook[i].phone, input) == 0)) {
-            printf("Talalat: %s - %s\n", phonebook[i].name, phonebook[i].phone);
+        if ((strcmp(phonebook[i].name, input) == 0) || (strcmp(phonebook[i].data, input) == 0)) {
+            printf("Talalat: %s - %s\n", phonebook[i].name, phonebook[i].data);
             printf("\n Navigalj vissza a telefonkonyvhez: [b] Back\n");
             found = true;
             }
@@ -177,6 +175,7 @@ void search_phonebook() {
 
 
 void navigation_menu() {
+    split_data(phonebook_data, phonebook, sizeof(PhonebookEntry), MAX_ENTRIES);
     int current_page = 0;
     int selected_index = 0;
     char choice;
@@ -207,6 +206,7 @@ void navigation_menu() {
                 display_phonebook_page(current_page);
             } else if (choice == 'm') {
                 system("cls");
+                current_page = 0;
                 display_phonebook_page_with_selection(current_page, selected_index);
                 is_Selection = true;
             }
@@ -241,6 +241,7 @@ void navigation_menu() {
                 break;
                 case 'v':
                     system("cls");
+                    current_page = 0;
                     display_phonebook_page(current_page);
                     is_Selection = false;
                 break;
@@ -252,17 +253,12 @@ void navigation_menu() {
 
 
 int main() {
-    setlocale(LC_ALL, "hu_HU.UTF-8");
-
     getinputs();
-    decode_file("D:/Work/untitled/jelszo_javitott.bin");
-    if(split_username_password()) {
-        decode_file("D:/Work/untitled/telefonkonyv.bin");
-        split_phonebook();
+    decode_file("D:/Work/untitled/jelszo_javitott.bin",  users_data);
+    if(isLoggedIn()) {
+        decode_file("D:/Work/untitled/telefonkonyv.bin", phonebook_data);
         navigation_menu();
     }
-
-
 
     return 0;
 }
