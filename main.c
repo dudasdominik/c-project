@@ -12,33 +12,22 @@
 #define PAGE_SIZE 10
 
 char lines[MAX_LINES][MAX_LINE_LENGTH];
-char username[800];
-char password[800];
+char username[25];
+char password[25];
 int key[] = {5, -14, 31, -9, 3};
 int key_length = 5;
 
 typedef struct {
     char name[50];
     char data[50];
-} Data;
-
+} Entry;
 char users_data[1600];
-typedef struct {
-    char name[50];
-    char data[50];
-} User;
-User users[800];
-
-
+Entry users[800];
 char phonebook_data[MAX_ENTRIES];
-typedef struct {
-    char name[50];
-    char data[50];
-} PhonebookEntry;
-PhonebookEntry phonebook[800];
+Entry phonebook[800];
 
 
-void getinputs () {
+void get_inputs () {
     printf("\nPlease enter the username: \n");
     fgets(username, sizeof(username), stdin);
     username[strcspn(username, "\n")] = '\0';
@@ -72,29 +61,27 @@ void decode_file(char *filename, char *decoded) {
 }
 
 
-void split_data(char *data, void *entries, size_t entry_size, int max_entries) {
+void split_data(char *data, Entry *entries, int max_entries) {
     char *line = strtok(data, "\n");
     int entry_count = 0;
     while (line != NULL) {
         char *separator = strpbrk(line, ";*");
         if ((separator != NULL) && (entry_count < max_entries)) {
             *separator = '\0';
-            char *entry_ptr = (char*)entries + (entry_count * entry_size);
-
-            strncpy(((Data *)entry_ptr)->name, line, sizeof(((Data *)entry_ptr)->name) - 1);
-            strncpy(((Data *)entry_ptr)->data, separator + 1, sizeof(((Data *)entry_ptr)->data) - 1);
-            ((Data *)entry_ptr)->name[sizeof(((Data *)entry_ptr)->name) - 1] = '\0';
-            ((Data *)entry_ptr)->data[sizeof(((Data *)entry_ptr)->data) - 1] = '\0';
-
+            strncpy(entries[entry_count].name, line, sizeof(entries[entry_count].name) - 1);
+            strncpy(entries[entry_count].data, separator + 1, sizeof(entries[entry_count].data) - 1);
+            entries[entry_count].name[sizeof(entries[entry_count].name) - 1] = '\0';
+            entries[entry_count].data[sizeof(entries[entry_count].data) - 1] = '\0';
             entry_count++;
         }
         line = strtok(NULL, "\n");
     }
 }
 
+
 bool isLoggedIn() {
-    split_data(users_data, users, sizeof(User), 800);
-    for (int i = 0; i < sizeof(users); i++) {
+    split_data(users_data, users, 800);
+    for (int i = 0; i < 800; i++) {
         if (strcmp(users[i].name, username) == 0 && strcmp(users[i].data, password) == 0) {
             return true;
         }
@@ -172,10 +159,17 @@ void search_phonebook() {
     }
 }
 
-
+void display_page(int page, bool is_selection, int selected_index) {
+    system("cls");
+    if (is_selection) {
+        display_phonebook_page_with_selection(page, selected_index);
+    } else {
+        display_phonebook_page(page);
+    }
+}
 
 void navigation_menu() {
-    split_data(phonebook_data, phonebook, sizeof(PhonebookEntry), MAX_ENTRIES);
+    split_data(phonebook_data, phonebook, MAX_ENTRIES);
     int current_page = 0;
     int selected_index = 0;
     char choice;
@@ -183,67 +177,72 @@ void navigation_menu() {
     system("cls");
     display_phonebook_page(current_page);
     while (true) {
-        if(!is_Selection) {
-            choice = getchar();
-            getchar();
-
-            if (choice == 'n' && current_page <= 5) {
-                system("cls");
-                display_phonebook_page(current_page);
-                current_page++;
-            } else if (choice == 'p' && current_page >= 0) {
-                system("cls");
-                display_phonebook_page(current_page);
-                current_page--;
-            } else if (choice == 'q') {
-                system("exit");
-                break;
-            } else if (choice == 's') {
-                system("cls");
-                search_phonebook(current_page);
-            } else if (choice == 'b') {
-                system("cls");
-                display_phonebook_page(current_page);
-            } else if (choice == 'm') {
-                system("cls");
-                current_page = 0;
-                display_phonebook_page_with_selection(current_page, selected_index);
-                is_Selection = true;
-            }
-            else {
-                printf("Nem valid, probald meg ujra\n");
-            }
-        }else {
+        if(is_Selection) {
             switch (getch()) {
                 case 'w':
                     if (selected_index > current_page * PAGE_SIZE) {
                         system("cls");
-                        display_phonebook_page_with_selection(current_page, selected_index);
                         selected_index--;
+                        display_phonebook_page_with_selection(current_page, selected_index);
                     } else if (current_page > 0) {
                         system("cls");
-                        display_phonebook_page_with_selection(current_page, selected_index);
                         current_page--;
+                        display_phonebook_page_with_selection(current_page, selected_index);
                         selected_index = (current_page + 1) * PAGE_SIZE - 1;
                     }
                 break;
                 case 's':
                     if (selected_index < (current_page + 1) * PAGE_SIZE - 1 && phonebook[selected_index + 1].name[0] != '\0') {
                         system("cls");
-                        display_phonebook_page_with_selection(current_page, selected_index);
                         selected_index++;
+                        display_phonebook_page_with_selection(current_page, selected_index);
                     } else if ((current_page + 1) * PAGE_SIZE < MAX_ENTRIES && phonebook[(current_page + 1) * PAGE_SIZE].name[0] != '\0') {
                         system("cls");
-                        display_phonebook_page_with_selection(current_page, selected_index);
                         current_page++;
+                        display_phonebook_page_with_selection(current_page, selected_index);
                         selected_index = current_page * PAGE_SIZE;
                     }
                 break;
                 case 'v':
                     system("cls");
+                current_page = 0;
+                display_phonebook_page(current_page);
+                is_Selection = false;
+                break;
+            }
+        }
+        else {
+            choice = getchar();
+            getchar();
+            switch (choice) {
+                case 'n':
+                    if (current_page < 5) {
+                        current_page++;
+                        display_page(current_page, is_Selection, selected_index);
+                    }
+                break;
+                case 'p':
+                    if (current_page > 0) {
+                        current_page--;
+                        display_page(current_page, is_Selection, selected_index);
+                    }
+                break;
+                case 'q':
+                    return;
+                case 's':
+                    search_phonebook();
+                break;
+                case 'm':
+                    is_Selection = true;
                     current_page = 0;
-                    display_phonebook_page(current_page);
+                    display_page(current_page, is_Selection, selected_index);
+                break;
+                case 'b':
                     is_Selection = false;
+                display_page(current_page, is_Selection, selected_index);
+                break;
+                default:
+                    printf("Nem valid, probald meg ujra\n");
                 break;
             }
         }
@@ -253,12 +252,11 @@ void navigation_menu() {
 
 
 int main() {
-    getinputs();
+    get_inputs();
     decode_file("D:/Work/untitled/jelszo_javitott.bin",  users_data);
     if(isLoggedIn()) {
         decode_file("D:/Work/untitled/telefonkonyv.bin", phonebook_data);
         navigation_menu();
     }
-
     return 0;
 }
